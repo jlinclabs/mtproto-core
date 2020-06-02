@@ -67,7 +67,7 @@ class Socket extends Obfuscated {
 
     const { buffer } = await this.obfuscate(intermediateBytes);
 
-    this.socket.send(buffer);
+    if (this.socket.readyState === 1) this.socket.send(buffer);
   }
 }
 

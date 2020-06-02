@@ -1,14 +1,8 @@
-const { localStorage } = require('./local');
-
 const cache = {};
 
 class Storage {
   constructor(prefix, options = {}) {
     this._prefix = prefix;
-
-    const { customLocalStorage = localStorage } = options;
-
-    this.localStorage = customLocalStorage;
   }
 
   setPrefix(prefix) {
@@ -32,19 +26,11 @@ class Storage {
   }
 
   set(key, value) {
-    cache[key] = value;
-
-    this.localStorage.setItem(key, JSON.stringify(value));
+    cache[key] = value
   }
 
   get(key) {
     if (key in cache) {
-      return cache[key];
-    }
-
-    if (this.localStorage.getItem(key)) {
-      cache[key] = JSON.parse(this.localStorage.getItem(key));
-
       return cache[key];
     }
 

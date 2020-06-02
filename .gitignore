@@ -12,7 +12,6 @@
 /build
 /dist
 /package
-/scheme/index.js
 /dual-publish-tmp
 
 # misc

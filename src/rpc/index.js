@@ -433,7 +433,7 @@ class RPC {
           this.offset -= 4;
 
           const type =
-            constructorId === 558156313 ? 'rpc_error' : waitMessage.type;
+            constructorId === 558156313 ? 'rpc_error' : (waitMessage && waitMessage.type) || 'rpc_error';
 
           result.result = this.predicate(type);
         },
@@ -537,11 +537,12 @@ class RPC {
       this.ackMessage(messageId);
 
       const waitMessage = this.messagesWaitResponse.get(message.req_msg_id);
-
-      if (message.result._ === 'rpc_error') {
-        waitMessage.reject(message.result);
-      } else {
-        waitMessage.resolve(message.result);
+      if (waitMessage) {
+        if (message.result._ === 'rpc_error') {
+          waitMessage.reject(message.result);
+        } else {
+          waitMessage.resolve(message.result);
+        }
       }
 
       this.messagesWaitResponse.delete(message.req_msg_id);

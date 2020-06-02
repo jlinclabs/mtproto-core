@@ -53,20 +53,21 @@ const PRODUCTION_DC_LIST = [
 
 class MTProto {
   constructor(options) {
-    const { api_id, api_hash, test = false, customLocalStorage } = options;
+    const { api_id, api_hash, test = false, authKeys } = options;
 
     this.api_id = api_id;
     this.api_hash = api_hash;
 
-    this.dcList = test ? TEST_DC_LIST : PRODUCTION_DC_LIST;
+    this.dcList = MTProto.dcList(test);
+    this.authStorageProps = MTProto.authStorageProps(test);
 
-    this.customLocalStorage = customLocalStorage;
 
     this.updates = new EventEmitter();
 
     this.rpcs = {};
 
-    this.storage = new Storage('', { customLocalStorage });
+    this.storage = new Storage('');
+    if (authKeys) this.importAuthKeys(authKeys)
 
     this.setDefaultDc();
   }
@@ -139,17 +140,45 @@ class MTProto {
         throw Error(`Don't find DC ${dcId}`);
       }
 
-      const { api_id, api_hash, updates, customLocalStorage } = this;
+      const { api_id, api_hash, updates } = this;
 
       this.rpcs[dcId] = new RPC({
         api_id,
         api_hash,
         dc,
         updates,
-        storage: new Storage(dc.id, { customLocalStorage }),
+        storage: new Storage(dc.id),
       });
     }
   }
+
+  importAuthKeys(authKeysAsJson) {
+    const authKeys = JSON.parse(authKeysAsJson)
+    this.authStorageProps.forEach(prop => {
+      if (authKeys[prop]) this.storage.set(prop, authKeys[prop])
+    })
+  }
+
+  getAuthKeys() {
+    const authKeys = {};
+    this.authStorageProps.forEach(prop => {
+      if (this.storage.get(prop)) authKeys[prop] = this.storage.get(prop)
+    })
+    return JSON.stringify(authKeys);
+  }
+}
+
+MTProto.dcList = function(test = false) {
+  return test ? TEST_DC_LIST : PRODUCTION_DC_LIST;
+}
+
+MTProto.authStorageProps = function(test = false){
+  const keys = []
+  this.dcList(test).forEach(dc => {
+    keys.push(`${dc.id}authKey`);
+    keys.push(`${dc.id}serverSalt`);
+  })
+  return keys
 }
 
 module.exports = { MTProto };
