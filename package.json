@@ -48,12 +48,13 @@
     "watch": "karma start --browsers Chrome",
     "test": "karma start --browsers ChromeCI --single-run",
     "merge-scheme": "node scripts/merge-scheme.js",
-    "prepublishOnly": "run-s merge-scheme"
+    "prepublishOnly": "run-s merge-scheme",
+    "postinstall": "run-s merge-scheme"
   },
   "license": "GPL-3.0",
   "dependencies": {
     "aes-js": "3.1.2",
-    "big-integer": "1.6.48",
+    "big-integer": "^1.6.48",
     "env-paths": "2.2.0",
     "events": "3.1.0",
     "leemon": "6.2.0",
