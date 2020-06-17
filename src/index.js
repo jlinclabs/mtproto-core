@@ -53,14 +53,21 @@ const PRODUCTION_DC_LIST = [
 
 class MTProto {
   constructor(options) {
-    const { api_id, api_hash, test = false, authKeys } = options;
+    const {
+      api_id,
+      api_hash,
+      test = false,
+      authKeys,
+      onSocketOpen,
+      onSocketError,
+      defaultDcId,
+    } = options;
 
     this.api_id = api_id;
     this.api_hash = api_hash;
 
     this.dcList = MTProto.dcList(test);
     this.authStorageProps = MTProto.authStorageProps(test);
-
 
     this.updates = new EventEmitter();
 
@@ -69,11 +76,15 @@ class MTProto {
     this.storage = new Storage('');
     if (authKeys) this.importAuthKeys(authKeys)
 
-    this.setDefaultDc();
+    this.onSocketOpen = onSocketOpen(this.updates);
+    this.onSocketError = onSocketError;
+
+    this.createRPC(defaultDcId || 2)
   }
 
   call(method, params = {}, options = {}) {
-    const { dcId = this.storage.get('defaultDcId'), syncAuth = true } = options;
+    const { syncAuth = true } = options;
+    const dcId = options.dcId || this.storage.get('defaultDcId') || 2;
 
     this.createRPC(dcId);
 
@@ -125,30 +136,38 @@ class MTProto {
   }
 
   setDefaultDc(dcId) {
-    const defaultDcId = dcId || this.storage.get('defaultDcId') || 2;
-
-    this.storage.set('defaultDcId', defaultDcId);
-
-    this.createRPC(defaultDcId);
+    this.storage.set('defaultDcId', dcId);
   }
 
-  createRPC(dcId) {
-    if (!this.rpcs[dcId]) {
-      const dc = this.dcList.find(({ id }) => id === dcId);
+  async createRPC(dcId) {
+    if (dcId in this.rpcs) {
+      return;
+    }
 
-      if (!dc) {
-        throw Error(`Don't find DC ${dcId}`);
-      }
+    const dc = this.dcList.find(({ id }) => id === dcId);
+    if (!dc) {
+      console.warn(`Don't find DC ${dcId}`);
+      return;
+    }
 
-      const { api_id, api_hash, updates } = this;
+    const { api_id, api_hash, updates } = this;
 
-      this.rpcs[dcId] = new RPC({
-        api_id,
-        api_hash,
-        dc,
-        updates,
-        storage: new Storage(dc.id),
-      });
+    this.rpcs[dcId] = new RPC({
+      api_id,
+      api_hash,
+      dc,
+      updates,
+      storage: new Storage(dc.id),
+    });
+
+    const socket = this.rpcs[dcId].transport.socket;
+
+    if (socket.on) {
+      if (this.onSocketOpen) socket.on('connect', this.onSocketOpen);
+      if (this.onSocketError) socket.on('error', this.onSocketError);
+    } else {
+      if (this.onSocketOpen) socket.onopen = this.onSocketOpen;
+      if (this.onSocketError) socket.onerror = this.onSocketError;
     }
   }
 
